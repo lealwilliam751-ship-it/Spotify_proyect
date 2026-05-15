@@ -5,40 +5,39 @@ date: 2026-05-14
 version: 1.0
 description: Router de autenticación con Spotify usando PKCE.
 """
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Depends
 from fastapi.responses import RedirectResponse
 from urllib.parse import urlencode
 import secrets
 import hashlib
 import base64
-import os
-from app.core.config import settings
-from app.models import PkceSession
+from datetime import datetime
 from sqlalchemy.orm import Session
-from app.services.auth_service import create_pkce_session, store_pkce_session
-
+from app.core.config import settings
+from app.services.auth_service import handle_spotify_callback
+from app.database import get_db  # <-- Necesitamos esta dependencia
+from app.core.pkce_store import PKCE_SESSIONS, cleanup_expired_pkce_sessions
 router = APIRouter()
+
 
 # Endpoint de login: genera código PKCE y redirige a Spotify
 @router.get("/login")
 def login(request: Request):
-    # Generar code_verifier y code_challenge
+    cleanup_expired_pkce_sessions()  # Limpia estados viejos antes de crear uno nuevo
+
     code_verifier = secrets.token_urlsafe(64)
     code_challenge = base64.urlsafe_b64encode(
         hashlib.sha256(code_verifier.encode()).digest()
     ).decode().rstrip('=')
 
-    # Guardar session temporalmente (en memoria o DB según implementación)
     state = secrets.token_urlsafe(32)
     
-    # Aquí deberías guardar 'state' y 'code_verifier' en BD o cache
-    # Por ahora, usaremos una variable global simple (NO recomendado en producción, pero válido para examen)
-    request.app.state.pkce_sessions[state] = {
+    # Guardar session temporalmente en app.state (como antes)
+    PKCE_SESSIONS[state] = {
         "verifier": code_verifier,
         "created_at": datetime.utcnow()
     }
 
-    # Construir URL de autorización de Spotify
     params = {
         "client_id": settings.SPOTIFY_CLIENT_ID,
         "response_type": "code",
@@ -50,5 +49,22 @@ def login(request: Request):
     }
 
     spotify_auth_url = f"https://accounts.spotify.com/authorize?{urlencode(params)}"
-    
     return RedirectResponse(url=spotify_auth_url)
+
+# Endpoint de callback: recibe el código de Spotify y devuelve JWT
+@router.get("/callback")
+def callback(request: Request, code: str, state: str, db: Session = Depends(get_db)):
+    # Verificar que el state exista y sea válido
+    if state not in PKCE_SESSIONS:
+        raise HTTPException(status_code=400, detail="Invalid or expired state parameter")
+
+    session_data = PKCE_SESSIONS.pop(state)
+    code_verifier = session_data["verifier"]
+    
+
+    try:
+        # Llamar al servicio que hace todo el trabajo
+        result = handle_spotify_callback(db, code, state, code_verifier)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error during authentication: {str(e)}")

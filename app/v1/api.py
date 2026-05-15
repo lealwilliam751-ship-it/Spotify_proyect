@@ -10,9 +10,10 @@ from app.v1.routers import auth, profile, artists, tracks, history, etl
 
 api_router = APIRouter()
 
-api_router.include_router(auth.router, tags=["Auth"])
-api_router.include_router(profile.router, tags=["Profile"])
-api_router.include_router(artists.router, tags=["Artists"])
-api_router.include_router(tracks.router, tags=["Tracks"])
-api_router.include_router(history.router, tags=["History"])
-api_router.include_router(etl.router, tags=["ETL"])
+# Cada router con su propio prefijo para mantener consistencia
+api_router.include_router(auth.router, prefix="/auth", tags=["Auth"])
+api_router.include_router(profile.router, prefix="/profile", tags=["Profile"])
+api_router.include_router(artists.router, prefix="/artists", tags=["Artists"])
+api_router.include_router(tracks.router, prefix="/tracks", tags=["Tracks"])
+api_router.include_router(history.router, prefix="/history", tags=["History"])
+api_router.include_router(etl.router, prefix="/etl", tags=["ETL"])
