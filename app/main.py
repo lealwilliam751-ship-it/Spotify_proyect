@@ -14,8 +14,7 @@ app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
 )
-
-# Configuración de CORS
+app.state.pkce_sessions = {}  
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[settings.FRONTEND_URL],
