@@ -38,8 +38,13 @@ def run_etl_process(db: Session, user: DimUser) -> dict:
     
     try:
         # 1. Obtener tracks recientes de Spotify
-        items = get_recently_played(user.spotify_access_token, limit=50)
-        
+        items = get_recently_played(
+            access_token=user.spotify_access_token, 
+            limit=50, 
+            refresh_token=user.spotify_refresh_token, 
+            db=db, 
+            user=user
+        )
         # 2. Procesar cada item
         for item in items:
             track_data = item["track"]
