@@ -6,6 +6,15 @@ version: 1.0
 description: Punto de entrada principal para la API de Spotify DWH. Configura la aplicación FastAPI y los middlewares.
 """
 
+# Force IPv4 resolution to prevent broken IPv6 system/network routing from causing ConnectTimeout errors in Python
+import socket
+orig_getaddrinfo = socket.getaddrinfo
+def patched_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
+    if family == socket.AF_UNSPEC or family == socket.AF_INET6:
+        family = socket.AF_INET
+    return orig_getaddrinfo(host, port, family, type, proto, flags)
+socket.getaddrinfo = patched_getaddrinfo
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.v1.api import router as v1_router
