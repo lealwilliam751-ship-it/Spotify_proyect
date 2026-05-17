@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ETL Control | Spotify DWH</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body { background-color: #000; color: white; font-family: sans-serif; }
+        .glass-card { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 0.75rem; padding: 1.5rem; }
+        .nav-item { display: flex; align-items: center; gap: 0.75rem; color: #9ca3af; padding: 0.75rem 1rem; border-radius: 0.5rem; transition: all 0.2s; }
+        .nav-item:hover { color: white; background: rgba(255, 255, 255, 0.1); }
+        .nav-item.active { color: white; background: rgba(255, 255, 255, 0.15); font-weight: bold; }
+        .btn-sync { background-color: #1DB954; color: black; font-weight: 800; padding: 0.75rem 1.5rem; border-radius: 9999px; transition: transform 0.2s; }
+        .btn-sync:hover { transform: scale(1.05); }
+    </style>
+</head>
+<body class="flex min-h-screen">
+    
+    <!-- Sidebar -->
+    <aside class="w-64 bg-black border-r border-white/10 p-6 flex flex-col gap-10">
+        <div class="flex items-center gap-2 text-[#1DB954] font-black text-xl">
+            <i data-lucide="music" class="w-8 h-8"></i>
+            <span>SPOTIFY DWH</span>
+        </div>
+        <nav class="flex flex-col gap-2">
+            <a href="dashboard.html" class="nav-item">
+                <i data-lucide="layout-dashboard"></i> Dashboard
+            </a>
+            <a href="etl.html" class="nav-item active">
+                <i data-lucide="refresh-cw"></i> Pipeline ETL
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main -->
+    <main class="flex-1 p-10 overflow-y-auto">
+        <header class="flex justify-between items-center mb-10">
+            <div>
+                <h1 class="text-3xl font-bold">Pipeline ETL</h1>
+                <p class="text-gray-400">Control de extracción y carga incremental.</p>
+            </div>
+            <button id="syncBtn" onclick="runEtl()" class="btn-sync flex items-center gap-2">
+                <i data-lucide="play" class="w-4 h-4 fill-current"></i> SINCRONIZAR AHORA
+            </button>
+        </header>
+
+        <section class="glass-card">
+            <h2 class="text-xl font-bold mb-6">Historial de Auditoría (etl_audit)</h2>
+            <div class="overflow-hidden border border-white/10 rounded-lg">
+                <table class="w-full text-left text-sm">
+                    <thead>
+                        <tr class="bg-white/5 text-gray-400">
+                            <th class="p-4">ID</th>
+                            <th class="p-4">Fecha</th>
+                            <th class="p-4">Estado</th>
+                            <th class="p-4">Registros</th>
+                        </tr>
+                    </thead>
+                    <tbody id="etlLogs">
+                        <tr><td colspan="4" class="p-10 text-center text-gray-500">Cargando historial...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script src="assets/js/api.js"></script>
+    <script>
+        lucide.createIcons();
+
+        async function fetchStatus() {
+            try {
+                const logs = await spotifyApi.getEtlStatus();
+                renderLogs(logs);
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function runEtl() {
+            const btn = document.getElementById('syncBtn');
+            btn.disabled = true;
+            btn.innerText = 'EJECUTANDO...';
+            try {
+                await spotifyApi.runEtl();
+                setTimeout(fetchStatus, 3000);
+            } catch (err) {
+                alert('Error al iniciar el ETL.');
+            } finally {
+                btn.disabled = false;
+                btn.innerText = 'SINCRONIZAR AHORA';
+            }
+        }
+
+        function renderLogs(list) {
+            const container = document.getElementById('etlLogs');
+            if (list.length === 0) {
+                container.innerHTML = '<tr><td colspan="4" class="p-10 text-center text-gray-500 italic">No hay ejecuciones registradas.</td></tr>';
+                return;
+            }
+            container.innerHTML = list.map(log => `
+                <tr class="border-t border-white/5 hover:bg-white/5">
+                    <td class="p-4 font-mono text-gray-500">#${log.audit_id}</td>
+                    <td class="p-4">${new Date(log.started_at).toLocaleString()}</td>
+                    <td class="p-4">
+                        <span class="font-bold ${log.status === 'COMPLETED' ? 'text-[#1DB954]' : 'text-yellow-500'}">
+                            ${log.status}
+                        </span>
+                    </td>
+                    <td class="p-4 text-gray-400">
+                        A: ${log.artists_new} | T: ${log.tracks_new} | H: ${log.history_new}
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        fetchStatus();
+    </script>
+</body>
+</html>

@@ -1,162 +1,147 @@
-# Spotify Data Warehouse API
+# Mi Spotify Wrapped — Personal Data Warehouse
 
-Backend RESTful API para la extracción, transformación y carga (ETL) de datos de escucha de Spotify hacia un Data Warehouse en PostgreSQL. Desarrollado con FastAPI, SQLAlchemy y Alembic.
+Proyecto integrador de bases de datos: pipeline ETL completo que consume la Spotify Web API y construye un mini Data Warehouse personal en PostgreSQL. Cada estudiante usa su propia cuenta de Spotify como fuente de datos.
 
-## 🚀 Características Principales
+---
 
-- **Autenticación PKCE**: Implementación completa del flujo OAuth2 con Proof Key for Code Exchange para login seguro con Spotify.
-- **Seguridad JWT**: Protección de endpoints mediante tokens JSON Web Tokens firmados.
-- **Proceso ETL Automatizado**: Extracción de historial de escucha, transformación de datos y carga en modelo dimensional (Star Schema).
-- **Auditoría de Datos**: Registro detallado de cada ejecución ETL en tabla `etl_audit`.
-- **Refresh Token Automático**: Manejo transparente de la expiración de tokens de acceso de Spotify.
-- **API Documentada**: Documentación interactiva automática generada con Swagger UI.
+## Arquitectura general
 
-## 📋 Requisitos Previos
+![Arquitectura del sistema](docs/assets/architecture.png)
 
-- **Python 3.12+**
-- **PostgreSQL**: Se recomienda usar [Neon.tech](https://neon.tech) para una base de datos en la nube gratuita y escalable.
-- **Cuenta de Desarrollador Spotify**: Registra tu app en [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) para obtener `Client ID` y configurar `Redirect URI`.
+---
 
-## ⚙️ Instalación y Configuración
+## Modelo dimensional (Galaxy Schema)
 
-Sigue estos pasos para levantar el proyecto en tu entorno local:
+![Galaxy schema DWH](docs/assets/galaxy-schema.png)
 
-### 1. Clonar el Repositorio
+- El modelo es mayormente estrella con un elemento de copo de nieve. `dim_tracks.artist_id` es una FK entre dimensiones — convierte esa relación en un elemento snowflake. Se mantiene por conveniencia de queries y ETL. En un star schema estricto, `artist_name` iría desnormalizado dentro de `dim_tracks`.
+---
 
-```bash
-git clone <URL_DE_TU_REPOSITORIO_GITHUB>
-cd backend
+## Flujo OAuth PKCE + ETL
 
-2. Entorno Virtual y Dependencias
+![Flujo de interacción completo](docs/assets/interaction-flow.png)
 
-Se recomienda usar un entorno virtual para aislar las dependencias:
-# Crear entorno virtual
-python -m venv venv
+---
 
-# Activar entorno virtual
-# En Windows:
-venv\Scripts\activate
-# En macOS/Linux:
-source venv/bin/activate
+## Stack tecnológico
 
-# Instalar dependencias
-pip install -r requirements.txt
+| Capa | Tecnología |
+|---|---|
+| Base de datos | PostgreSQL 17 en Neon (serverless) |
+| Backend | Python + FastAPI |
+| Migraciones | Alembic |
+| Frontend | Next.js o React + Vite (TypeScript) |
+| Autenticación | Spotify Authorization Code PKCE |
+| Documentación API | OpenAPI (Swagger) auto-generado por FastAPI |
 
-3. Configuración de Variables de Entorno
-El proyecto utiliza variables de entorno para gestionar configuraciones sensibles.
-Copia el archivo de ejemplo:
-bash
-cp .env.example .env
+Referencia completa de reglas y convenciones:
+- Backend → `backend/docs/workshop_definitions.md`
+- Frontend → `frontend/workshops_definitions.md`
 
-Edita el archivo .env con tus credenciales reales:
-DATABASE_URL: Obtenida desde tu panel de control de Neon.tech. Asegúrate de que incluya ?sslmode=require.
-SPOTIFY_CLIENT_ID: Tu Client ID del dashboard de Spotify.
-SPOTIFY_REDIRECT_URI: Debe coincidir exactamente con la configurada en Spotify (ej. http://127.0.0.1:8000/v1/auth/callback).
-SECRET_KEY: Una cadena aleatoria larga y segura para firmar los JWTs.
-4. Migraciones de Base de Datos
-Aplica las migraciones de Alembic para crear el schema dwh y todas las tablas necesarias (dim_users, dim_artists, dim_tracks, fact_listening_history, etl_audit):
-python -m alembic upgrade head
+---
 
-🏃‍♂️ Ejecución del Servidor
-Levanta el servidor de desarrollo con recarga automática:
-uvicorn app.main:app --reload
+## Implementación
 
-La API estará disponible en:
-Base URL: http://127.0.0.1:8000
-Documentación Swagger UI: http://127.0.0.1:8000/docs
-ReDoc: http://127.0.0.1:8000/redoc
-📁 Estructura del Proyecto
-backend/
-├── app/
-│   ├── core/              # Configuración central, seguridad y utilidades
-│   │   ├── config.py      # Gestión de variables de entorno con Pydantic Settings
-│   │   ├── security.py    # Decodificación de JWT y dependencia de usuario actual
-│   │   └── pkce_store.py  # Almacén temporal de sesiones PKCE (desarrollo)
-│   ├── v1/                # Versión 1 de la API
-│   │   ├── api.py         # Router principal que agrupa todos los módulos
-│   │   └── routers/       # Endpoints específicos por dominio
-│   │       ├── auth.py    # Login PKCE y Callback
-│   │       ├── profile.py # Datos del usuario autenticado
-│   │       ├── artists.py # Artistas top desde Spotify
-│   │       ├── tracks.py  # Historial reciente desde Spotify
-│   │       ├── history.py # Consultas analíticas al DWH
-│   │       └── etl.py     # Trigger del proceso ETL
-│   ├── services/          # Lógica de negocio y servicios externos
-│   │   ├── auth_service.py   # Intercambio de tokens y gestión de usuarios
-│   │   ├── spotify_service.py# Cliente HTTP para API de Spotify
-│   │   └── etl_service.py    # Lógica de extracción, transformación y carga
-│   ├── models.py          # Definición de modelos SQLAlchemy (Tablas DWH)
-│   ├── database.py        # Configuración de conexión a PostgreSQL
-│   └── main.py            # Punto de entrada de la aplicación FastAPI
-├── alembic/               # Scripts de migración de base de datos
-├── .env                   # Variables de entorno locales (NO SUBIR A GIT)
-├── .env.example           # Plantilla de variables de entorno
-├── requirements.txt       # Listado de dependencias Python
-└── README.md              # Este archivo
+### Backend
 
+1. Crear entorno virtual e instalar dependencias:
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate      # Windows: .venv\Scripts\activate
+   pip install -r requirements.txt
+   ```
+2. Copiar `.env.example` a `.env` y completar las variables (ver sección Variables de entorno).
+3. Correr migraciones contra Neon:
+   ```bash
+   alembic upgrade head
+   ```
+4. Iniciar el servidor:
+   ```bash
+   uvicorn backend.main:app --reload --port 8000
+   ```
+5. Swagger disponible en `http://127.0.0.1:8000/docs`.
 
-🧪 Flujo de Uso Básico
-Sigue estos pasos para probar la API completa:
-1. Autenticación con Spotify
-Ve a http://127.0.0.1:8000/docs
-Busca el endpoint GET /v1/auth/login y haz clic en "Try it out" → "Execute"
-Serás redirigido a Spotify para autorizar la app "My Spotify Wrapped"
-Al aceptar, serás redirigido a /v1/auth/callback donde verás un JSON como este:
-{
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "token_type": "bearer",
-  "user_id": 1,
-  "spotify_id": "31zukaxpp6sw3huchk6jrxs6ccye"
-}
+### Frontend
 
-👉 Copia el valor de "access_token" — ese es tu JWT.
-2. Acceder a Endpoints Protegidos
-En Swagger UI, haz clic en el botón "Authorize" 🔒 (arriba a la derecha)
-Pega tu JWT (sin la palabra Bearer) en el campo "Value"
-Haz clic en [Authorize] y cierra la ventana
-Ahora puedes ejecutar endpoints protegidos como:
-GET /v1/profile/me → Datos del usuario
-GET /v1/artists/top → Artistas más escuchados
-GET /v1/tracks/recent → Canciones recientes
-3. Ejecutar el Proceso ETL
-Busca el endpoint POST /v1/etl/run
-Asegúrate de estar autorizado (JWT cargado)
-Haz clic en "Execute"
-Recibirás un resumen como este:
-json
-{
-  "status": "success",
-  "records_processed": 50,
-  "artists_new": 15,
-  "tracks_new": 47,
-  "history_new": 50,
-  ...
-}
+1. Instalar dependencias:
+   ```bash
+   cd frontend
+   npm install
+   ```
+2. Copiar `.env.example` a `.env.local` (Next.js) o `.env` (Vite) y completar `NEXT_PUBLIC_API_URL` o `VITE_API_URL`.
+3. Iniciar el cliente:
+   ```bash
+   npm run dev
+   ```
+4. Abrir `http://localhost:3000`.
 
-✅ Esto significa que tus datos fueron cargados correctamente en el Data Warehouse.
-4. Consultar Estadísticas del DWH
-Ejecuta GET /v1/history/stats
-Verás un resumen de cuántas canciones has escuchado por día de la semana:
-{
-  "user_id": 1,
-  "total_listens": 50,
-  "by_day_of_week": [
-    { "day_of_week": "Monday", "listen_count": 8 },
-    { "day_of_week": "Tuesday", "listen_count": 12 },
-    ...
-  ]
-}
+---
 
-🎉 ¡Tu Data Warehouse está funcionando!
-🛠️ Tecnologías Utilizadas
-Framework: FastAPI
-Servidor: Uvicorn
-BD: PostgreSQL (Neon)
-ORM: SQLAlchemy 2.0
-Migraciones: Alembic
-Validación: Pydantic & Pydantic Settings
-HTTP Client: HTTPX
-Auth: Python-Jose (JWT), OAuth2 PKCE
-👨‍ Autor
-Santiago Capacho
-Proyecto académico - Data Warehouse II - 2026
+## Variables de entorno
+
+Crear un archivo `.env` en la raíz del proyecto (nunca versionar este archivo):
+
+```env
+# Spotify Developer App
+SPOTIFY_CLIENT_ID=
+SPOTIFY_CLIENT_SECRET=
+SPOTIFY_REDIRECT_URI=http://127.0.0.1:8000/v1/auth/callback
+
+# Neon PostgreSQL
+DATABASE_URL=postgresql://user:password@host/dbname?sslmode=require
+
+# App
+APP_NAME=Spotify DWH API
+APP_VERSION=1.0.0
+SECRET_KEY=
+FRONTEND_URL=http://localhost:3000
+```
+
+---
+
+## Documentación del proceso
+
+Cada entrega se documenta en la carpeta `/docs` de la raíz del proyecto. Cada archivo sigue el esquema:
+
+```
+docs/
+├── assets/                         ← imágenes y diagramas
+├── 00-initial-config.md            ← configuración Neon, .env, Spotify Dashboard
+├── 01-ddl-migrations.md            ← scripts DDL y migraciones Alembic
+├── 02-backend-implementation.md    ← desarrollo del backend FastAPI
+├── 03-frontend-implementation.md   ← desarrollo del frontend
+├── 04-etl-pipeline.md              ← implementación del pipeline ETL
+└── 05-analytical-queries.md        ← consultas SQL y resultados con screenshots
+```
+
+### Estructura obligatoria de cada archivo de documentación
+
+Cada `docs/XX-nombre.md` debe contener:
+
+```markdown
+# [Título del proceso]
+
+## Qué se configuró / implementó
+Descripción breve de lo que se hizo en este paso.
+
+## Screenshots
+[Insertar capturas de pantalla del resultado]
+
+## Prompt utilizado
+Si se usó IA para generar o asistir este paso, pegar el prompt exacto aquí.
+Si no se usó ninguna técnica de IA: escribir `No se utilizó ninguna técnica de IA.`
+
+## Técnica de prompting aplicada
+Nombre de la técnica si aplica (zero-shot, few-shot, chain-of-thought, role prompting…).
+Si no aplica: `No aplica.`
+```
+
+---
+
+## Entregables
+
+| # | Entregable | Contenido |
+|---|---|---|
+| 1 | DDL + Modelo ER | Scripts SQL ejecutables + diagrama ER justificando star schema |
+| 2 | Script ETL | Código Python con las 3 fases separadas + log de ejecución con conteo de registros |
+| 3 | Documentación `/docs` | Mínimo un archivo por fase del proyecto con screenshots y prompts |

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Spotify Wrapped | DWH</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #121212; color: white; }
+        .btn-spotify { background-color: #1DB954; color: black; font-weight: 900; padding: 1rem 2.5rem; border-radius: 9999px; transition: transform 0.2s; }
+        .btn-spotify:hover { transform: scale(1.05); }
+        .glass-card { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 1rem; padding: 1.5rem; }
+    </style>
+</head>
+<body class="flex min-h-screen flex-col items-center justify-center p-6 text-center">
+    
+    <div class="z-10 flex flex-col gap-8 max-w-4xl">
+        <div class="bg-[#1DB954] w-20 h-20 rounded-full flex items-center justify-center mx-auto animate-bounce">
+            <i data-lucide="music" class="w-10 h-10 text-black"></i>
+        </div>
+
+        <h1 class="text-6xl font-black tracking-tighter">
+            MI <span class="text-[#1DB954]">SPOTIFY</span> WRAPPED
+        </h1>
+
+        <p class="text-gray-400 text-lg max-w-md mx-auto">
+            Una solución segura y sin instalaciones para analizar tus datos de Spotify. Conecta tu cuenta y empieza el proceso ETL.
+        </p>
+
+        <button onclick="handleLogin()" id="loginBtn" class="btn-spotify inline-flex items-center gap-2 mx-auto">
+            CONECTAR CON SPOTIFY
+        </button>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12 text-left">
+            <div class="glass-card">
+                <h3 class="text-[#1DB954] font-bold mb-2">Seguro</h3>
+                <p class="text-sm text-gray-400">Sin paquetes npm. Solo código puro y transparente.</p>
+            </div>
+            <div class="glass-card">
+                <h3 class="text-[#1DB954] font-bold mb-2">Rápido</h3>
+                <p class="text-sm text-gray-400">Carga instantánea sin procesos de compilación.</p>
+            </div>
+            <div class="glass-card">
+                <h3 class="text-[#1DB954] font-bold mb-2">Personal</h3>
+                <p class="text-sm text-gray-400">Tus datos, tu base de datos, tu control total.</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/js/api.js"></script>
+    <script>
+        lucide.createIcons();
+
+        async function handleLogin() {
+            const btn = document.getElementById('loginBtn');
+            btn.innerText = 'CARGANDO...';
+            btn.disabled = true;
+            try {
+                const response = await spotifyApi.getLoginUrl();
+                window.location.href = response.auth_url;
+            } catch (error) {
+                console.error(error);
+                alert('Error al conectar con el backend. Asegúrate de que uvicorn esté corriendo.');
+                btn.innerText = 'CONECTAR CON SPOTIFY';
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

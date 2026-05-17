@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | Spotify DWH</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body { background-color: #000; color: white; font-family: sans-serif; }
+        .glass-card { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 0.75rem; padding: 1.5rem; }
+        .nav-item { display: flex; align-items: center; gap: 0.75rem; color: #9ca3af; padding: 0.75rem 1rem; border-radius: 0.5rem; transition: all 0.2s; }
+        .nav-item:hover { color: white; background: rgba(255, 255, 255, 0.1); }
+        .nav-item.active { color: white; background: rgba(255, 255, 255, 0.15); font-weight: bold; }
+    </style>
+</head>
+<body class="flex min-h-screen">
+    
+    <!-- Sidebar -->
+    <aside class="w-64 bg-black border-r border-white/10 p-6 flex flex-col gap-10">
+        <div class="flex items-center gap-2 text-[#1DB954] font-black text-xl">
+            <i data-lucide="music" class="w-8 h-8"></i>
+            <span>SPOTIFY DWH</span>
+        </div>
+        
+        <nav class="flex flex-col gap-2">
+            <a href="dashboard.html" class="nav-item active">
+                <i data-lucide="layout-dashboard"></i> Dashboard
+            </a>
+            <a href="etl.html" class="nav-item">
+                <i data-lucide="refresh-cw"></i> Pipeline ETL
+            </a>
+            <a href="#" onclick="logout()" class="nav-item text-red-400">
+                <i data-lucide="log-out"></i> Salir
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main -->
+    <main class="flex-1 p-10 overflow-y-auto">
+        <header class="flex justify-between items-center mb-10">
+            <div>
+                <h1 class="text-3xl font-bold">¡Hola, <span id="userName">Cargando...</span>!</h1>
+                <p class="text-gray-400">Tus datos reales desde el Data Warehouse de Neon.</p>
+            </div>
+        </header>
+
+        <!-- Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            <div class="glass-card">
+                <p class="text-gray-400 text-sm">Artistas en DB</p>
+                <p id="artistCount" class="text-4xl font-bold">--</p>
+            </div>
+            <div class="glass-card">
+                <p class="text-gray-400 text-sm">Tracks en DB</p>
+                <p id="trackCount" class="text-4xl font-bold">--</p>
+            </div>
+            <div class="glass-card border-[#1DB954]/30">
+                <p class="text-gray-400 text-sm">País Spotify</p>
+                <p id="userCountry" class="text-4xl font-bold text-[#1DB954]">--</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+            <!-- Artists Table -->
+            <section class="glass-card">
+                <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                    <i data-lucide="users" class="text-[#1DB954]"></i> Top Artistas
+                </h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <tbody id="artistList">
+                            <tr><td class="p-4 text-gray-500">Cargando datos...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Tracks Table -->
+            <section class="glass-card">
+                <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                    <i data-lucide="play" class="text-[#1DB954]"></i> Top Canciones
+                </h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <tbody id="trackList">
+                            <tr><td class="p-4 text-gray-500">Cargando datos...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script src="assets/js/api.js"></script>
+    <script>
+        lucide.createIcons();
+
+        async function loadData() {
+            try {
+                const profile = await spotifyApi.getProfile();
+                document.getElementById('userName').innerText = profile.display_name;
+                document.getElementById('userCountry').innerText = profile.country;
+
+                const artists = await spotifyApi.getTopArtists();
+                document.getElementById('artistCount').innerText = artists.length;
+                renderArtists(artists);
+
+                const tracks = await spotifyApi.getTopTracks();
+                document.getElementById('trackCount').innerText = tracks.length;
+                renderTracks(tracks);
+
+            } catch (err) {
+                console.error(err);
+                if (err.message.includes('401')) window.location.href = 'index.html';
+            }
+        }
+
+        function renderArtists(list) {
+            const container = document.getElementById('artistList');
+            container.innerHTML = list.slice(0, 5).map((a, i) => `
+                <tr class="border-b border-white/5 last:border-0">
+                    <td class="p-4 text-gray-500 w-8">${i+1}</td>
+                    <td class="p-4 font-medium">${a.name}</td>
+                    <td class="p-4 text-right">
+                         <div class="w-24 bg-white/10 h-1.5 rounded-full inline-block">
+                            <div class="bg-[#1DB954] h-full rounded-full" style="width: ${a.popularity}%"></div>
+                         </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function renderTracks(list) {
+            const container = document.getElementById('trackList');
+            container.innerHTML = list.slice(0, 5).map((t, i) => `
+                <tr class="border-b border-white/5 last:border-0">
+                    <td class="p-4 text-gray-500 w-8">${i+1}</td>
+                    <td class="p-4">
+                        <div class="font-medium">${t.name}</div>
+                        <div class="text-xs text-gray-500">${t.album_name}</div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function logout() {
+            localStorage.removeItem('spotify_dwh_token');
+            window.location.href = 'index.html';
+        }
+
+        loadData();
+    </script>
+</body>
+</html>
