@@ -72,10 +72,35 @@ async def get_stats(
         func.max(ListeningHistory.played_at).label("max_d")
     ).filter(ListeningHistory.user_id == current_user.user_id).first()
 
+    # Map any day of week format (English names, Spanish names, numbers) to Spanish abbreviations
+    days_map = {
+        "Monday": "Lun", "Mon": "Lun", "0": "Lun", "lunes": "Lun", "Lunes": "Lun",
+        "Tuesday": "Mar", "Tue": "Mar", "1": "Mar", "martes": "Mar", "Martes": "Mar",
+        "Wednesday": "Mié", "Wed": "Mié", "2": "Mié", "miércoles": "Mié", "Miércoles": "Mié",
+        "Thursday": "Jue", "Thu": "Jue", "3": "Jue", "jueves": "Jue", "Jueves": "Jue",
+        "Friday": "Vie", "Fri": "Vie", "4": "Vie", "viernes": "Vie", "Viernes": "Vie",
+        "Saturday": "Sáb", "Sat": "Sáb", "5": "Sáb", "sábado": "Sáb", "Sábado": "Sáb",
+        "Sunday": "Dom", "Sun": "Dom", "6": "Dom", "domingo": "Dom", "Domingo": "Dom"
+    }
+    
+    order_map = {"Lun": 0, "Mar": 1, "Mié": 2, "Jue": 3, "Vie": 4, "Sáb": 5, "Dom": 6}
+    
+    weekly_list = []
+    # Deduplicate weekly data in case of mixed database values
+    dedup = {}
+    for r in weekly_data:
+        day_label = days_map.get(r.d, r.d[:3] if r.d else "Lun")
+        dedup[day_label] = dedup.get(day_label, 0) + r.v
+    
+    for day, val in dedup.items():
+        weekly_list.append({"d": day, "v": val})
+        
+    weekly_list.sort(key=lambda x: order_map.get(x["d"], 7))
+
     return {
         "total_plays": total_plays,
         "hourly": [{"h": str(r.h).zfill(2), "v": r.v} for r in hourly_data],
-        "weekly": [{"d": r.d[:3], "v": r.v} for r in weekly_data],
+        "weekly": weekly_list,
         "genres": [{"g": g, "v": int((v/total_g)*100)} for g, v in top_genres],
         "min_date": date_range.min_d.isoformat() if date_range and date_range.min_d else None,
         "max_date": date_range.max_d.isoformat() if date_range and date_range.max_d else None

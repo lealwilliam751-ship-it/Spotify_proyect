@@ -19,14 +19,22 @@ class SpotifyClient:
             "Authorization": f"Bearer {access_token}",
             "Content-Type": "application/json"
         }
+        # Connection pooling and persistent keep-alive sessions
+        self.client = httpx.AsyncClient(
+            timeout=httpx.Timeout(15.0, connect=5.0),
+            headers=self.headers
+        )
 
     async def get(self, endpoint: str, params: dict = None):
         """Realiza una petición GET a un endpoint específico de Spotify con timeout."""
         url = f"{self.BASE_URL}{endpoint}"
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.get(url, headers=self.headers, params=params)
-            response.raise_for_status()
-            return response.json()
+        response = await self.client.get(url, params=params)
+        response.raise_for_status()
+        return response.json()
+
+    async def close(self):
+        """Cierra el cliente HTTP persistente."""
+        await self.client.aclose()
 
     @staticmethod
     def get_auth_url(client_id: str, redirect_uri: str, scope: str, state: str, code_challenge: str):

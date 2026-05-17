@@ -37,6 +37,8 @@ class ETLService:
             self.audit.status = "COMPLETED"
         except Exception as e:
             print(f"ETL ERROR: {e}")
+            import traceback
+            traceback.print_exc()
             if self.audit:
                 self.audit.status = "FAILED"
                 self.audit.error_message = str(e)[:500]
@@ -44,6 +46,8 @@ class ETLService:
             if self.audit:
                 self.audit.finished_at = datetime.utcnow()
                 self.db.commit()
+            if hasattr(self, "spotify"):
+                await self.spotify.close()
             self.db.close()
 
     async def _process_user_profile(self):
@@ -57,7 +61,10 @@ class ETLService:
             stmt = insert(Artist).values(
                 spotify_id=item["id"], name=item["name"], 
                 genres=item.get("genres", []), popularity=item.get("popularity", 0)
-            ).on_conflict_do_update(index_elements=["spotify_id"], set_={"popularity": item.get("popularity", 0)})
+            ).on_conflict_do_update(
+                index_elements=["spotify_id"], 
+                set_={"genres": item.get("genres", []), "popularity": item.get("popularity", 0)}
+            )
             self.db.execute(stmt)
         self.db.commit()
 
@@ -81,8 +88,10 @@ class ETLService:
 
         params = {"limit": 50}
         if last_play:
-            # Convertir a milisegundos para el parámetro 'after' de Spotify
-            params["after"] = int(last_play.timestamp() * 1000)
+            from datetime import timezone
+            # last_play is in UTC (naive), force timezone.utc to avoid system timezone interpretation shift
+            utc_last_play = last_play.replace(tzinfo=timezone.utc)
+            params["after"] = int(utc_last_play.timestamp() * 1000)
 
         data = await self.spotify.get("/me/player/recently-played", params=params)
         new_count = 0
@@ -108,9 +117,12 @@ class ETLService:
             track = self.db.query(Track).filter(Track.spotify_id == t_data["id"]).first()
             
             # Insert Historia (Doble verificación por si acaso)
+            days_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+            day_name = days_names[played_at.weekday()]
+            
             stmt_hist = insert(ListeningHistory).values(
                 user_id=self.user.user_id, track_id=track.track_id, artist_id=artist.artist_id,
-                played_at=played_at, day_of_week=str(played_at.weekday()), hour_of_day=played_at.hour
+                played_at=played_at, day_of_week=day_name, hour_of_day=played_at.hour
             ).on_conflict_do_nothing()
             res = self.db.execute(stmt_hist)
             if res.rowcount > 0: new_count += 1
