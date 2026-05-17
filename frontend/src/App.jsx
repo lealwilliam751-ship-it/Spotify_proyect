@@ -5,7 +5,7 @@ import {
 } from "recharts";
 import {
   Music, LogOut, Zap, RefreshCw, CheckCircle, XCircle, Loader2,
-  Database, Layers, Star, TrendingUp, Activity
+  Database, Layers, Star, TrendingUp, Activity, User
 } from "lucide-react";
 import { spotifyApi } from "./api.js";
 
@@ -154,6 +154,7 @@ function CallbackPage({ onDone }) {
 function Sidebar({ page, setPage, user, onLogout }) {
   const menuItems = [
     { id: "dashboard", label: "Dashboard", icon: Activity },
+    { id: "profile", label: "Mi Perfil", icon: User },
     { id: "etl", label: "Pipeline ETL", icon: Zap },
   ];
 
@@ -241,6 +242,29 @@ function DashboardPage() {
     fetchData();
   }, []);
 
+  const isEmpty = stats.total_plays === 0 && artists.length === 0 && tracks.length === 0;
+
+  if (isEmpty) {
+    return (
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px", textAlign: "center", minHeight: "80vh", animation: "fade-in-up 0.6s ease forwards" }}>
+        <div style={{
+          width: "80px", height: "80px", borderRadius: "50%",
+          background: "rgba(201, 168, 76, 0.05)", border: "1px solid rgba(201, 168, 76, 0.2)",
+          display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "24px"
+        }}>
+          <Database size={36} color="var(--gold-main)" strokeWidth={1.5} />
+        </div>
+        <h2 style={{ fontFamily: "'Cinzel', serif", fontSize: "1.5rem", color: "#f0e2bc", marginBottom: "12px", fontWeight: 400 }}>El Data Warehouse está vacío</h2>
+        <p style={{ fontSize: "0.95rem", color: "var(--text-secondary)", maxWidth: "450px", lineHeight: 1.6, marginBottom: "32px" }}>
+          Tu almacén de datos personales de Spotify se ha inicializado correctamente en PostgreSQL (Neon), pero aún no se ha importado información de escucha.
+        </p>
+        <button onClick={() => window.location.reload()} className="btn-primary">
+          Actualizar Página
+        </button>
+      </div>
+    );
+  }
+
   const chartHourly = Array.from({ length: 24 }, (_, i) => {
     const hourStr = i.toString().padStart(2, '0');
     const existing = stats.hourly.find(h => h.h === hourStr);
@@ -259,8 +283,12 @@ function DashboardPage() {
         </p>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "20px", marginBottom: "40px" }}>
-        {[ { label: "Artistas Top", value: topArtistCount, icon: Music }, { label: "Canciones Top", value: topTrackCount, icon: Star }, { label: "Total Reproducciones", value: totalPlaysCount, icon: TrendingUp }
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "20px", marginBottom: "40px" }}>
+        {[ 
+          { label: "Artistas Top", value: topArtistCount, icon: Music }, 
+          { label: "Canciones Top", value: topTrackCount, icon: Star }, 
+          { label: "Total Reproducciones", value: totalPlaysCount, icon: TrendingUp },
+          { label: "Género Principal", value: stats.genres?.length > 0 ? stats.genres[0].g : "Ninguno", icon: Layers }
         ].map((stat, i) => (
             <div key={stat.label} className="card" style={{ padding: "24px", animation: `fade-in-up 0.5s ${0.1 + i * 0.1}s ease forwards`, opacity: 0 }}>
               <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "16px" }}>
@@ -471,6 +499,60 @@ function ETLPage() {
   );
 }
 
+// ─── PROFILE PAGE ────────────────────────────────────────────────────────────
+function ProfilePage({ user }) {
+  const userInitial = user?.display_name?.charAt(0)?.toUpperCase() || "U";
+  return (
+    <div style={{ flex: 1, overflowY: "auto", padding: "32px 40px", animation: "fade-in-up 0.6s ease forwards" }}>
+      <div style={{ marginBottom: "40px" }}>
+        <h1 className="page-title">Mi Perfil</h1>
+        <p className="subtitle">Detalles de tu cuenta de usuario sincronizada</p>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "32px", alignItems: "start" }}>
+        {/* Avatar Card */}
+        <div className="card" style={{ padding: "40px 24px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "20px" }}>
+          <div style={{
+            width: "120px", height: "120px", borderRadius: "50%",
+            background: "linear-gradient(135deg, rgba(201, 168, 76, 0.15) 0%, rgba(201, 168, 76, 0.02) 100%)",
+            border: "2px solid var(--gold-main)", boxShadow: "0 0 20px rgba(201, 168, 76, 0.2)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: "3.5rem", fontFamily: "'Cinzel', serif", color: "var(--gold-light)"
+          }}>
+            {userInitial}
+          </div>
+          <div>
+            <h2 style={{ fontFamily: "'Cinzel', serif", fontSize: "1.2rem", color: "#f0e2bc", marginBottom: "4px" }}>{user?.display_name || "Usuario"}</h2>
+            <p style={{ fontSize: "0.8rem", color: "var(--gold-med)", textTransform: "uppercase", letterSpacing: "0.05em" }}>{user?.product || "free"} plan</p>
+          </div>
+        </div>
+
+        {/* Details Card */}
+        <div className="card" style={{ padding: "32px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "24px" }}>
+            <div className="accent-bar" />
+            <h3 style={{ fontFamily: "'Cinzel', serif", fontSize: "0.9rem", fontWeight: 700, color: "#f0e2bc", letterSpacing: "0.05em" }}>INFORMACIÓN DE LA CUENTA</h3>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+            {[
+              { label: "ID de Spotify", val: user?.spotify_id },
+              { label: "Correo Electrónico", val: user?.email || "No compartido" },
+              { label: "País o Región", val: user?.country || "Desconocido" },
+              { label: "Seguidores en Spotify", val: user?.followers || 0 },
+            ].map((item, idx) => (
+              <div key={idx} style={{ borderBottom: "1px solid rgba(201, 168, 76, 0.08)", paddingBottom: "12px" }}>
+                <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "4px" }}>{item.label}</p>
+                <p style={{ fontSize: "0.95rem", color: "#f0e2bc", fontWeight: 500 }}>{item.val}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── APP ROOT ─────────────────────────────────────────────────────────────────
 export default function App() {
   const [screen, setScreen] = useState("loading");
@@ -521,6 +603,7 @@ export default function App() {
           <main style={{ flex: 1, background: "linear-gradient(135deg, rgba(10, 7, 3, 0.95) 0%, rgba(13, 10, 5, 0.98) 100%)", position: "relative", overflow: "hidden" }}>
             <div style={{ position: "absolute", inset: 0, opacity: 0.015, backgroundImage: "linear-gradient(rgba(201, 168, 76, 1) 1px, transparent 1px), linear-gradient(90deg, rgba(201, 168, 76, 1) 1px, transparent 1px)", backgroundSize: "50px 50px", pointerEvents: "none" }} />
             {page === "dashboard" && <DashboardPage />}
+            {page === "profile" && <ProfilePage user={user} />}
             {page === "etl" && <ETLPage />}
           </main>
         </div>
