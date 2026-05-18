@@ -115,8 +115,8 @@ class ETLService:
             # Upsert Track
             stmt_track = insert(Track).values(
                 spotify_id=t_data["id"], name=t_data["name"], artist_id=artist.artist_id,
-                album_name=t_data["album"]["name"], duration_ms=t_data.get("duration_ms", 210000),
-                popularity=t_data.get("popularity", 70), explicit=t_data.get("explicit", False)
+                album_name=t_data["album"]["name"], duration_ms=t_data.get("duration_ms") or 210000,
+                popularity=t_data.get("popularity") or 75, explicit=t_data.get("explicit", False)
             ).on_conflict_do_nothing()
             res_track = self.db.execute(stmt_track)
             if res_track.rowcount > 0: new_tracks += 1
