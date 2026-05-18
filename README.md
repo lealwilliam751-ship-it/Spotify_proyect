@@ -1,147 +1,123 @@
 # Mi Spotify Wrapped — Personal Data Warehouse
 
-Proyecto integrador de bases de datos: pipeline ETL completo que consume la Spotify Web API y construye un mini Data Warehouse personal en PostgreSQL. Cada estudiante usa su propia cuenta de Spotify como fuente de datos.
+Proyecto integrador de bases de datos: pipeline ETL completo que consume la Spotify Web API y construye un mini Data Warehouse personal en PostgreSQL. Cada estudiante usa su propia cuenta de Spotify como fuente de datos para el análisis exploratorio.
 
 ---
 
-## Arquitectura general
+## 🏛️ Arquitectura general
 
 ![Arquitectura del sistema](docs/assets/architecture.png)
 
 ---
 
-## Modelo dimensional (Galaxy Schema)
+## 🌌 Modelo dimensional (Galaxy Schema)
 
 ![Galaxy schema DWH](docs/assets/galaxy-schema.png)
 
-- El modelo es mayormente estrella con un elemento de copo de nieve. `dim_tracks.artist_id` es una FK entre dimensiones — convierte esa relación en un elemento snowflake. Se mantiene por conveniencia de queries y ETL. En un star schema estricto, `artist_name` iría desnormalizado dentro de `dim_tracks`.
+- El modelo sigue una arquitectura híbrida Constelación de Hechos (*Galaxy Schema*). `dim_tracks.artist_id` actúa como una FK entre dimensiones conformadas, añadiendo un elemento *snowflake* (copo de nieve) que optimiza las consultas analíticas y el mantenimiento del pipeline ETL sin sacrificar rendimiento.
+
 ---
 
-## Flujo OAuth PKCE + ETL
+## 🔄 Flujo OAuth PKCE + Orquestación ETL
 
 ![Flujo de interacción completo](docs/assets/interaction-flow.png)
 
 ---
 
-## Stack tecnológico
+## 💻 Stack Tecnológico Oficial
 
 | Capa | Tecnología |
 |---|---|
-| Base de datos | PostgreSQL 17 en Neon (serverless) |
-| Backend | Python + FastAPI |
-| Migraciones | Alembic |
-| Frontend | Next.js o React + Vite (TypeScript) |
-| Autenticación | Spotify Authorization Code PKCE |
-| Documentación API | OpenAPI (Swagger) auto-generado por FastAPI |
-
-Referencia completa de reglas y convenciones:
-- Backend → `backend/docs/workshop_definitions.md`
-- Frontend → `frontend/workshops_definitions.md`
+| **Base de Datos** | PostgreSQL 16 en Neon Cloud (Serverless) |
+| **Backend** | Python 3.11+ con FastAPI |
+| **ORM & Migraciones** | SQLAlchemy 2.0 + Alembic |
+| **Frontend** | React 18 empaquetado con Vite |
+| **Estilizado UI** | Vanilla CSS (CSS3 Puro con variables y módulos) |
+| **Gráficos UI** | Recharts + Lucide React |
+| **Autenticación** | Spotify OAuth 2.0 con flujo PKCE |
+| **Ciencia de Datos (EDA)** | Jupyter Notebook + Pandas + Seaborn |
+| **Documentación API** | OpenAPI (Swagger UI) autogenerado en `/docs` |
 
 ---
 
-## Implementación
+## 🚀 Guía Paso a Paso para Ejecutar el Proyecto Funcional
 
-### Backend
+Sigue estas instrucciones para levantar todo el ecosistema (Backend, Frontend y Base de Datos) en tu máquina local de forma exitosa:
 
-1. Crear entorno virtual e instalar dependencias:
+### ⚙️ 1. Configuración y Ejecución del Backend (FastAPI)
+
+1. **Abre una terminal en la raíz del proyecto** y verifica que el entorno virtual esté activado:
    ```bash
-   python -m venv .venv
-   source .venv/bin/activate      # Windows: .venv\Scripts\activate
+   source .venv/bin/activate      # En Windows: .venv\Scripts\activate
+   ```
+2. **Instala las dependencias** (si no lo has hecho previamente):
+   ```bash
    pip install -r requirements.txt
    ```
-2. Copiar `.env.example` a `.env` y completar las variables (ver sección Variables de entorno).
-3. Correr migraciones contra Neon:
+3. **Verifica tus variables de entorno:** Asegúrate de tener el archivo `.env` en la raíz con tus credenciales de Spotify y la `DATABASE_URL` de Neon.
+4. **Ejecuta las migraciones de base de datos** para verificar que las tablas existan en Neon:
    ```bash
    alembic upgrade head
    ```
-4. Iniciar el servidor:
+5. **Inicia el servidor web FastAPI** (asegurando que Python reconozca el directorio raíz):
    ```bash
-   uvicorn backend.main:app --reload --port 8000
+   PYTHONPATH=. uvicorn app.main:app --reload --port 8000
    ```
-5. Swagger disponible en `http://127.0.0.1:8000/docs`.
+6. **Verifica la API:** Abre tu navegador y entra a `http://127.0.0.1:8000/docs` para ver la interfaz interactiva de Swagger UI.
 
-### Frontend
+---
 
-1. Instalar dependencias:
+### 💻 2. Configuración y Ejecución del Frontend (React + Vite)
+
+1. **Abre una segunda terminal** y navega a la carpeta del frontend:
    ```bash
    cd frontend
+   ```
+2. **Instala los paquetes de Node:**
+   ```bash
    npm install
    ```
-2. Copiar `.env.example` a `.env.local` (Next.js) o `.env` (Vite) y completar `NEXT_PUBLIC_API_URL` o `VITE_API_URL`.
-3. Iniciar el cliente:
+3. **Inicia el servidor de desarrollo Vite:**
    ```bash
    npm run dev
    ```
-4. Abrir `http://localhost:3000`.
+4. **Abre la aplicación:** Entra desde tu navegador a `http://localhost:3000`.
+5. **Flujo de Uso:** Haz clic en **"Iniciar Sesión con Spotify"**. Al completar la autorización, el backend disparará automáticamente el pipeline ETL en segundo plano para sincronizar tus canciones recientes con la base de datos de Neon.
 
 ---
 
-## Variables de entorno
+### 📊 3. Ejecución del Análisis Exploratorio de Datos (EDA)
 
-Crear un archivo `.env` en la raíz del proyecto (nunca versionar este archivo):
+El análisis exploratorio se encuentra en la carpeta `notebooks/`. Para visualizar o regenerar las gráficas con tus datos más recientes:
 
-```env
-# Spotify Developer App
-SPOTIFY_CLIENT_ID=
-SPOTIFY_CLIENT_SECRET=
-SPOTIFY_REDIRECT_URI=http://127.0.0.1:8000/v1/auth/callback
-
-# Neon PostgreSQL
-DATABASE_URL=postgresql://user:password@host/dbname?sslmode=require
-
-# App
-APP_NAME=Spotify DWH API
-APP_VERSION=1.0.0
-SECRET_KEY=
-FRONTEND_URL=http://localhost:3000
-```
+1. **Desde VSCode:** Abre el archivo `notebooks/eda_spotify_william_santiago.ipynb`.
+2. Haz clic en el botón **`Reiniciar y ejecutar todo`** (*Restart & Run All*) en la barra superior del notebook.
+3. El notebook se conectará a Neon de forma segura usando las variables del `.env`, descargará tus tablas frescas y generará de inmediato las 4 visualizaciones obligatorias (Top Artistas, Horas de escucha, Popularidad Mainstream y Distribución de Géneros).
 
 ---
 
-## Documentación del proceso
-
-Cada entrega se documenta en la carpeta `/docs` de la raíz del proyecto. Cada archivo sigue el esquema:
+## 📂 Estructura del Repositorio
 
 ```
-docs/
-├── assets/                         ← imágenes y diagramas
-├── 00-initial-config.md            ← configuración Neon, .env, Spotify Dashboard
-├── 01-ddl-migrations.md            ← scripts DDL y migraciones Alembic
-├── 02-backend-implementation.md    ← desarrollo del backend FastAPI
-├── 03-frontend-implementation.md   ← desarrollo del frontend
-├── 04-etl-pipeline.md              ← implementación del pipeline ETL
-└── 05-analytical-queries.md        ← consultas SQL y resultados con screenshots
-```
-
-### Estructura obligatoria de cada archivo de documentación
-
-Cada `docs/XX-nombre.md` debe contener:
-
-```markdown
-# [Título del proceso]
-
-## Qué se configuró / implementó
-Descripción breve de lo que se hizo en este paso.
-
-## Screenshots
-[Insertar capturas de pantalla del resultado]
-
-## Prompt utilizado
-Si se usó IA para generar o asistir este paso, pegar el prompt exacto aquí.
-Si no se usó ninguna técnica de IA: escribir `No se utilizó ninguna técnica de IA.`
-
-## Técnica de prompting aplicada
-Nombre de la técnica si aplica (zero-shot, few-shot, chain-of-thought, role prompting…).
-Si no aplica: `No aplica.`
+spotify-dwh-project/
+├── app/                            ← Código fuente del Backend FastAPI
+│   ├── core/                       ← Clientes de Spotify, seguridad y config
+│   ├── db/                         ← Modelos SQLAlchemy y sesión
+│   └── v1/                         ← Routers de la API y servicios ETL/Auth
+├── alembic/                        ← Migraciones de base de datos
+├── frontend/                       ← Proyecto React + Vite (Dashboard UI)
+├── notebooks/                      ← Análisis Exploratorio de Datos (EDA)
+├── docs/                           ← Documentación técnica y prompts de cada fase
+├── .env                            ← Variables de entorno y credenciales (No versionado)
+└── README.md                       ← Guía principal del proyecto
 ```
 
 ---
 
-## Entregables
+## 👥 Autores y Colaboradores
 
-| # | Entregable | Contenido |
-|---|---|---|
-| 1 | DDL + Modelo ER | Scripts SQL ejecutables + diagrama ER justificando star schema |
-| 2 | Script ETL | Código Python con las 3 fases separadas + log de ejecución con conteo de registros |
-| 3 | Documentación `/docs` | Mínimo un archivo por fase del proyecto con screenshots y prompts |
+- **William Leal**
+- **Santiago Capacho**
+
+*Universidad de Pamplona · Bases de Datos II · 2026-I*  
+*Profesor: Juan Alejandro Carrillo Jaimes*
