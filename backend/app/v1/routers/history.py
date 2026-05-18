@@ -34,6 +34,16 @@ async def get_stats(
         ListeningHistory.user_id == current_user.user_id
     ).scalar() or 0
 
+    # Total de artistas únicos
+    total_artists = db.query(func.count(func.distinct(ListeningHistory.artist_id))).filter(
+        ListeningHistory.user_id == current_user.user_id
+    ).scalar() or 0
+
+    # Total de canciones únicas
+    total_tracks = db.query(func.count(func.distinct(ListeningHistory.track_id))).filter(
+        ListeningHistory.user_id == current_user.user_id
+    ).scalar() or 0
+
     # Actividad por hora
     hourly_data = db.query(
         ListeningHistory.hour_of_day.label("h"),
@@ -146,6 +156,8 @@ async def get_stats(
 
     return {
         "total_plays": total_plays,
+        "total_artists": total_artists,
+        "total_tracks": total_tracks,
         "hourly": [{"h": str(r.h).zfill(2), "v": r.v} for r in hourly_data],
         "weekly": weekly_list,
         "genres": [{"g": g, "v": int((v/total_g)*100)} for g, v in top_genres],

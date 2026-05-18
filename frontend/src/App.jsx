@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip,
-  ResponsiveContainer
+  ResponsiveContainer, PieChart, Pie, Cell
 } from "recharts";
 import {
   Music, LogOut, Zap, RefreshCw, CheckCircle, XCircle, Loader2,
@@ -165,7 +165,9 @@ function Sidebar({ page, setPage, user, onLogout }) {
     }}>
       <div style={{ animation: "fade-in-down 0.5s ease forwards" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
-          <Music size={24} color="#c9a84c" strokeWidth={1.5} />
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="#c9a84c" style={{ flexShrink: 0 }}>
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.59 14.42c-.18.29-.56.38-.85.2-2.37-1.45-5.37-1.78-8.89-1.02-.33.07-.67-.14-.74-.48-.07-.33.14-.67.48-.74 3.86-.83 7.16-.45 9.81 1.18.29.18.38.56.2.86zm1.23-2.72c-.23.37-.71.49-1.08.26-2.72-1.67-6.87-2.16-10.08-1.18-.41.13-.85-.11-.97-.52-.13-.41.11-.85.52-.97 3.68-1.12 8.24-.57 11.34 1.34.37.23.49.71.27 1.08zm.1-2.83c-3.26-1.94-8.65-2.12-11.76-1.18-.5.15-1.02-.13-1.17-.63-.15-.5.13-1.02.63-1.17 3.61-1.1 9.56-.89 13.31 1.34.45.27.6.85.33 1.3-.27.45-.85.6-1.3.34z" />
+          </svg>
           <span style={{ fontFamily: "'Cinzel', serif", fontSize: "1.1rem", fontWeight: 700, color: "#f0e2bc", letterSpacing: "0.05em" }}>SPOTIFY</span>
         </div>
         <p style={{ fontSize: "0.75rem", color: "#6b5535", letterSpacing: "0.1em", textTransform: "uppercase" }}>Data Warehouse</p>
@@ -216,14 +218,24 @@ function Sidebar({ page, setPage, user, onLogout }) {
   );
 }
 
+function TrendIcon({ size = 16, color = "#c9a84c" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+      stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+      <polyline points="17 6 23 6 23 12" />
+    </svg>
+  );
+}
+
 // ─── DASHBOARD PAGE ──────────────────────────────────────────────────────────
 function DashboardPage() {
   const [artists, setArtists] = useState([]);
   const [tracks, setTracks] = useState([]);
   const [stats, setStats] = useState({ total_plays: 0, hourly: [], weekly: [] });
   
-  const topArtistCount = useCountUp(artists.length);
-  const topTrackCount = useCountUp(tracks.length);
+  const topArtistCount = useCountUp(stats.total_artists || 0);
+  const topTrackCount = useCountUp(stats.total_tracks || 0);
   const totalPlaysCount = useCountUp(stats.total_plays || 0);
 
   useEffect(() => {
@@ -285,8 +297,8 @@ function DashboardPage() {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "20px", marginBottom: "40px" }}>
         {[ 
-          { label: "Artistas Top", value: topArtistCount, icon: Music }, 
-          { label: "Canciones Top", value: topTrackCount, icon: Star }, 
+          { label: "Artistas Escuchados", value: topArtistCount, icon: Music }, 
+          { label: "Canciones Escuchadas", value: topTrackCount, icon: Star }, 
           { label: "Total Reproducciones", value: totalPlaysCount, icon: TrendingUp },
           { label: "Género Principal", value: stats.genres?.length > 0 ? stats.genres[0].g : "Ninguno", icon: Layers }
         ].map((stat, i) => (
@@ -299,37 +311,85 @@ function DashboardPage() {
           ))}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "40px" }}>
-        {/* Artistas */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "24px", marginBottom: "40px" }}>
+        {/* Top Artistas */}
         <div className="card" style={{ padding: "28px", animation: "fade-in-up 0.5s 0.2s ease forwards", opacity: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "24px" }}><div className="accent-bar" /><h3 style={{ fontFamily: "'Cinzel', serif", fontSize: "0.9rem", fontWeight: 700, color: "#f0e2bc", letterSpacing: "0.05em" }}>TOP 5 ARTISTAS</h3></div>
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            {artists.length === 0 ? <p style={{color: '#a89060', fontSize: '0.85rem'}}>Cargando artistas...</p> : artists.map((artist, i) => (
-              <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px", background: "rgba(201, 168, 76, 0.03)", borderRadius: "3px", border: "1px solid rgba(201, 168, 76, 0.08)", transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)", animation: `fade-in-up 0.4s ${0.3 + i * 0.08}s ease forwards`, opacity: 0 }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(201, 168, 76, 0.08)"; e.currentTarget.style.borderColor = "rgba(201, 168, 76, 0.15)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(201, 168, 76, 0.03)"; e.currentTarget.style.borderColor = "rgba(201, 168, 76, 0.08)"; }}
-              >
-                <div style={{ flex: 1 }}><p style={{ fontSize: "0.9rem", color: "#f0e2bc", fontWeight: 500, marginBottom: "4px" }}>{artist.name}</p></div>
-                <div style={{ textAlign: "right" }}><p style={{ fontFamily: "'Cinzel', serif", fontSize: "0.85rem", color: "#c9a84c", fontWeight: 600 }}>{artist.play_count || 0} REPRODUCCIONES</p></div>
-              </div>
-            ))}
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "24px" }}><div className="accent-bar" /><h3 style={{ fontFamily: "'Cinzel', serif", fontSize: "0.9rem", fontWeight: 700, color: "#f0e2bc", letterSpacing: "0.05em" }}>ARTISTAS TOP</h3></div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            {artists.length === 0 ? <p style={{color: '#a89060', fontSize: '0.85rem'}}>Cargando artistas...</p> : artists.map((artist, i) => {
+              const COLORS = ["#c9a84c", "#e8c467", "#a89060", "#7d6b3d", "#6b5535"];
+              return (
+                <div key={i} style={{
+                  display: "flex", alignItems: "center", gap: "12px",
+                  padding: "8px 12px", borderBottom: "1px solid rgba(201,168,76,.06)",
+                  borderRadius: "6px", cursor: "pointer",
+                  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "rgba(201, 168, 76, 0.06)";
+                  e.currentTarget.style.transform = "translateX(6px)";
+                  e.currentTarget.style.paddingLeft = "16px";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "transparent";
+                  e.currentTarget.style.transform = "translateX(0)";
+                  e.currentTarget.style.paddingLeft = "12px";
+                }}
+                >
+                  <div style={{
+                    width: "36px", height: "36px", flexShrink: 0,
+                    background: `linear-gradient(135deg, ${COLORS[i % COLORS.length]}, ${COLORS[(i + 1) % COLORS.length]})`,
+                    borderRadius: "8px", display: "flex", alignItems: "center",
+                    justifyContent: "center", fontWeight: 700, color: "#0a0703", fontSize: "1rem",
+                  }}>
+                    {i + 1}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: ".9rem", color: "#f0e2bc", fontWeight: 600 }}>{artist.name}</p>
+                    <p style={{ fontSize: ".7rem", color: "#6b5535" }}>{artist.play_count || 0} reproducciones</p>
+                  </div>
+                  <TrendIcon size={14} color="#c9a84c" />
+                </div>
+              );
+            })}
           </div>
         </div>
 
-        {/* Tracks */}
+        {/* Canciones Top */}
         <div className="card" style={{ padding: "28px", animation: "fade-in-up 0.5s 0.25s ease forwards", opacity: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "24px" }}><div className="accent-bar" /><h3 style={{ fontFamily: "'Cinzel', serif", fontSize: "0.9rem", fontWeight: 700, color: "#f0e2bc", letterSpacing: "0.05em" }}>TOP 5 CANCIONES</h3></div>
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            {tracks.length === 0 ? <p style={{color: '#a89060', fontSize: '0.85rem'}}>Cargando canciones...</p> : tracks.map((track, i) => (
-              <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px", background: "rgba(201, 168, 76, 0.03)", borderRadius: "3px", border: "1px solid rgba(201, 168, 76, 0.08)", transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)", animation: `fade-in-up 0.4s ${0.3 + i * 0.08}s ease forwards`, opacity: 0 }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(201, 168, 76, 0.08)"; e.currentTarget.style.borderColor = "rgba(201, 168, 76, 0.15)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(201, 168, 76, 0.03)"; e.currentTarget.style.borderColor = "rgba(201, 168, 76, 0.08)"; }}
-              >
-                <div style={{ flex: 1 }}><p style={{ fontSize: "0.9rem", color: "#f0e2bc", fontWeight: 500, marginBottom: "4px" }}>{track.name}</p><p style={{ fontSize: "0.75rem", color: "#6b5535" }}>{track.artist_name}</p></div>
-                <div style={{ textAlign: "right" }}><p style={{ fontFamily: "'Cinzel', serif", fontSize: "0.8rem", color: "#c9a84c", fontWeight: 600 }}>{track.play_count || 0} PLAYS</p></div>
-              </div>
-            ))}
-          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "24px" }}><div className="accent-bar" /><h3 style={{ fontFamily: "'Cinzel', serif", fontSize: "0.9rem", fontWeight: 700, color: "#f0e2bc", letterSpacing: "0.05em" }}>CANCIONES TOP</h3></div>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ borderBottom: "1px solid rgba(201,168,76,.15)", background: "rgba(201,168,76,.05)" }}>
+                {[
+                  { label: "Posición", align: "center", width: "10%" },
+                  { label: "Canción", align: "left", width: "45%" },
+                  { label: "Artista", align: "left", width: "30%" },
+                  { label: "Reproducciones", align: "center", width: "15%" }
+                ].map((col) => (
+                  <th key={col.label} style={{
+                    padding: "10px 12px", textAlign: col.align, fontSize: ".7rem",
+                    color: "#6b5535", fontWeight: 600, letterSpacing: ".05em", textTransform: "uppercase",
+                    width: col.width
+                  }}>
+                    {col.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {tracks.length === 0 ? (
+                <tr><td colSpan="4" style={{ padding: "12px", textAlign: "center", color: "#a89060" }}>Cargando canciones...</td></tr>
+              ) : tracks.map((track, i) => (
+                <tr key={i} style={{ borderBottom: "1px solid rgba(201, 168, 76, 0.06)" }}>
+                  <td style={{ padding: "10px 12px", color: "#c9a84c", fontWeight: 700, textAlign: "center" }}>#{i + 1}</td>
+                  <td style={{ padding: "10px 12px", color: "#f0e2bc", fontWeight: 600, textAlign: "left" }}>{track.name}</td>
+                  <td style={{ padding: "10px 12px", color: "#a89060", textAlign: "left" }}>{track.artist_name}</td>
+                  <td style={{ padding: "10px 12px", color: "#c9a84c", fontWeight: 600, textAlign: "center" }}>{track.play_count || 0}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -351,13 +411,37 @@ function DashboardPage() {
 
       <div className="card" style={{ padding: "28px", animation: "fade-in-up 0.5s 0.4s ease forwards", opacity: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "24px" }}><div className="accent-bar" /><h3 style={{ fontFamily: "'Cinzel', serif", fontSize: "0.9rem", fontWeight: 700, color: "#f0e2bc", letterSpacing: "0.05em" }}>GÉNEROS FAVORITOS</h3></div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "24px" }}>
-          {(stats.genres?.length > 0 ? stats.genres : GENRES).map((g, i) => (
-            <div key={i} style={{ animation: `fade-in-up 0.4s ${0.4 + i * 0.08}s ease forwards`, opacity: 0 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}><span style={{ fontSize: "0.85rem", color: "#a89060", fontWeight: 500 }}>{g.g}</span><span style={{ fontFamily: "'Cinzel', serif", fontSize: "0.85rem", color: "#c9a84c", fontWeight: 600 }}>{g.v}%</span></div>
-              <div style={{ height: "4px", background: "rgba(201, 168, 76, 0.08)", borderRadius: "2px", overflow: "hidden" }}><div style={{ height: "100%", width: `${g.v}%`, background: "linear-gradient(90deg, #8b6914, #e8c467)", borderRadius: "2px", animation: `bar-grow 1s ${0.4 + i * 0.1}s cubic-bezier(0.34, 1.56, 0.64, 1) forwards`, opacity: 0 }} /></div>
-            </div>
-          ))}
+        <div style={{ width: "100%", height: 320, display: "flex", justifyContent: "center", alignItems: "center" }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={stats.genres?.length > 0 ? stats.genres : GENRES}
+                cx="50%"
+                cy="50%"
+                labelLine={true}
+                label={({ g, v }) => `${g}: ${v}%`}
+                outerRadius={100}
+                dataKey="v"
+              >
+                {(stats.genres?.length > 0 ? stats.genres : GENRES).map((_, index) => {
+                  const COLORS = ["#c9a84c", "#e8c467", "#a89060", "#7d6b3d", "#6b5535"];
+                  return <Cell key={index} fill={COLORS[index % COLORS.length]} />;
+                })}
+              </Pie>
+              <Tooltip
+                contentStyle={{
+                  background: "rgba(10, 7, 3, 0.95)",
+                  border: "1px solid #c9a84c",
+                  borderRadius: "6px",
+                  fontSize: "0.85rem",
+                  fontFamily: "'Rajdhani', sans-serif"
+                }}
+                itemStyle={{ color: "#f0e2bc" }}
+                labelStyle={{ display: "none" }}
+                formatter={(value, name, props) => [`${value}%`, props.payload.g]}
+              />
+            </PieChart>
+          </ResponsiveContainer>
         </div>
       </div>
     </div>
