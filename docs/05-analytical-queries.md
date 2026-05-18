@@ -126,3 +126,12 @@ ORDER BY
 
 ### Interpretacion de Resultados
 Garantiza el control de calidad sobre la ejecucion del pipeline, registrando las nuevas filas insertadas de forma incremental en cada fase.
+
+## Screenshots
+![Resultados Consultas Analiticas](assets/analytical_queries_results.png)
+
+## Prompt utilizado
+"Genera las 5 consultas analiticas SQL en base al Galaxy Schema del DWH de Spotify para obtener el top de artistas, actividad por hora, actividad por dia, popularidad de canciones y auditoria de cargas ETL, incluyendo la interpretacion de cada resultado."
+
+## Tecnica de prompting aplicada
+**Chain-of-Thought**: Se estructuro paso a paso cada consulta analitica partiendo del modelo dimensional, asegurando los JOINs correctos entre la tabla de hechos y las dimensiones.

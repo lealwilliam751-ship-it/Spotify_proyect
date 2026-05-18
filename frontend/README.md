@@ -103,5 +103,5 @@ frontend/
 
 ## Autor
 
-Santiago Capacho  
+William Leal
 Proyecto académico - Data Warehouse II - 2026
