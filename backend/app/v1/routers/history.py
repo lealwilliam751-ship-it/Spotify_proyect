@@ -51,20 +51,67 @@ async def get_stats(
 
     # Géneros más escuchados (Ponderado por reproducciones)
     from app.db.models import Artist
-    genre_data = db.query(Artist.genres).join(
+    genre_data = db.query(Artist.genres, Artist.name).join(
         ListeningHistory, Artist.artist_id == ListeningHistory.artist_id
     ).filter(ListeningHistory.user_id == current_user.user_id).all()
     
+    genre_mapping = {
+        # Vallenato & Tropical
+        "silvestre dangond": ["vallenato", "latino"],
+        "patricia teherán": ["vallenato", "latino"],
+        "otto serge": ["vallenato", "latino"],
+        "peter manjarrés": ["vallenato", "latino"],
+        "binomio de oro de américa": ["vallenato", "latino"],
+        "los diablitos": ["vallenato", "latino"],
+        
+        # Urbano & Reggaeton
+        "j balvin": ["reggaetón", "urbano"],
+        "paulo londo": ["trap", "urbano"],
+        "paulo londra": ["trap", "urbano"],
+        "sebastian yatra": ["pop latino", "reggaetón"],
+        "piso 21": ["pop latino", "reggaetón"],
+        "luister la voz": ["champedance", "reggaetón"],
+        
+        # Pop & Balada
+        "morat": ["pop latino", "indie pop"],
+        "fonseca": ["pop latino", "tropipop"],
+        "miley cyrus": ["pop", "dance pop"],
+        "kany garcía": ["pop", "balada"],
+        "benson boone": ["pop", "indie pop"],
+        "ed sheeran": ["pop", "acoustic"],
+        "teddy swims": ["soul", "pop"],
+        "alex warren": ["pop", "indie pop"],
+        
+        # Rock
+        "queen": ["rock", "classic rock"],
+        "ac/dc": ["hard rock", "rock"],
+        "scorpions": ["hard rock", "classic rock"],
+        
+        # Bandas sonoras, épica & clásica
+        "gabriel saban": ["soundtrack", "classical"],
+        "berend salverda": ["soundtrack", "ambient"],
+        "samuel kim": ["epic score", "soundtrack"],
+        "eternal eclipse": ["epic score", "soundtrack"],
+        "rok nardin": ["epic score", "soundtrack"],
+        "hidden citizens": ["epic score", "soundtrack"]
+    }
+
     all_genres = {}
-    for g_list in genre_data:
-        if g_list[0]:
-            # Cada reproducción suma a los géneros del artista
-            for g in g_list[0]:
-                all_genres[g] = all_genres.get(g, 0) + 1
+    for g_list, artist_name in genre_data:
+        genres = []
+        if g_list:
+            genres = g_list
+        else:
+            name_lower = artist_name.lower().strip() if artist_name else ""
+            genres = genre_mapping.get(name_lower, ["pop"])
+            
+        for g in genres:
+            g_title = g.title()
+            all_genres[g_title] = all_genres.get(g_title, 0) + 1
     
     top_genres = sorted(all_genres.items(), key=lambda x: x[1], reverse=True)[:5]
-    # Sumar solo las ocurrencias de los top 5 para que el % sume 100 (o el total real)
-    total_g = sum(all_genres.values()) or 1
+    # Sumar las ocurrencias de los top 5 para calcular el porcentaje
+    total_g = sum(dict(top_genres).values()) or 1
 
     # Rango de fechas
     date_range = db.query(

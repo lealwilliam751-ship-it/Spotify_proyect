@@ -33,7 +33,7 @@ def _run_etl_sync(user_id: int):
             print(f"ETL BACKGROUND: usuario {user_id} no encontrado")
             return
         print(f"ETL BACKGROUND: iniciando pipeline para {user.spotify_id}")
-        asyncio.run(ETLService(db, user).run_full_pipeline())
+        asyncio.run(ETLService(db, user).run_full_pipeline(user.user_id))
         print(f"ETL BACKGROUND: pipeline completado para {user.spotify_id}")
     except Exception as e:
         print(f"ETL BACKGROUND ERROR: {e}")

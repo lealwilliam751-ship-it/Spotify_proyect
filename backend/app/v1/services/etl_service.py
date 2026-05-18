@@ -45,6 +45,7 @@ class ETLService:
         finally:
             if self.audit:
                 self.audit.finished_at = datetime.utcnow()
+                self.audit.duration_ms = int((self.audit.finished_at - start_time).total_seconds() * 1000)
                 self.db.commit()
             if hasattr(self, "spotify"):
                 await self.spotify.close()
@@ -95,6 +96,8 @@ class ETLService:
 
         data = await self.spotify.get("/me/player/recently-played", params=params)
         new_count = 0
+        new_artists = 0
+        new_tracks = 0
         
         for item in data.get("items", []):
             t_data = item["track"]
@@ -105,7 +108,8 @@ class ETLService:
             stmt_art = insert(Artist).values(
                 spotify_id=t_data["artists"][0]["id"], name=t_data["artists"][0]["name"]
             ).on_conflict_do_nothing()
-            self.db.execute(stmt_art)
+            res_art = self.db.execute(stmt_art)
+            if res_art.rowcount > 0: new_artists += 1
             artist = self.db.query(Artist).filter(Artist.spotify_id == t_data["artists"][0]["id"]).first()
             
             # Upsert Track
@@ -113,7 +117,8 @@ class ETLService:
                 spotify_id=t_data["id"], name=t_data["name"], artist_id=artist.artist_id,
                 album_name=t_data["album"]["name"]
             ).on_conflict_do_nothing()
-            self.db.execute(stmt_track)
+            res_track = self.db.execute(stmt_track)
+            if res_track.rowcount > 0: new_tracks += 1
             track = self.db.query(Track).filter(Track.spotify_id == t_data["id"]).first()
             
             # Insert Historia (Doble verificación por si acaso)
@@ -128,4 +133,28 @@ class ETLService:
             if res.rowcount > 0: new_count += 1
             
         self.audit.history_new = new_count
+        self.audit.artists_new = new_artists
+        self.audit.tracks_new = new_tracks
+
+        # Enrich empty genres only for artists present in the user's actual listening history (batch by 50)
+        empty_artists = self.db.query(Artist).join(
+            ListeningHistory, Artist.artist_id == ListeningHistory.artist_id
+        ).filter(
+            ListeningHistory.user_id == self.user.user_id,
+            Artist.genres == []
+        ).distinct().all()
+        if empty_artists:
+            for i in range(0, len(empty_artists), 50):
+                batch = empty_artists[i:i+50]
+                ids_str = ",".join([a.spotify_id for a in batch])
+                try:
+                    artists_data = await self.spotify.get("/artists", params={"ids": ids_str})
+                    for item in artists_data.get("artists", []):
+                        if item:
+                            artist_in_db = next((x for x in batch if x.spotify_id == item["id"]), None)
+                            if artist_in_db:
+                                artist_in_db.genres = item.get("genres", [])
+                except Exception as ex:
+                    print(f"Error enriching artist genres: {ex}")
+
         self.db.commit()
