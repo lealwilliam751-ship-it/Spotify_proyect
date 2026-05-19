@@ -557,7 +557,9 @@ function StatCard({ stat, i }) {
           <p style={{ fontSize: "0.72rem", color: "#a89060", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: "10px" }}>
             {stat.label}
           </p>
-          <p className="stat-value">{stat.value.toLocaleString()}</p>
+          <p className="stat-value" style={stat.label === "Género Principal" ? { fontSize: "1.45rem", whiteSpace: "normal", wordBreak: "break-word", lineHeight: "1.2" } : {}}>
+            {typeof stat.value === "number" ? stat.value.toLocaleString() : stat.value}
+          </p>
         </div>
         <div style={{
           width: 44, height: 44, borderRadius: "8px",
