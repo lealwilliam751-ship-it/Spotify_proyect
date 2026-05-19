@@ -106,7 +106,8 @@ class ETLService:
             
             # Upsert Artista
             stmt_art = insert(Artist).values(
-                spotify_id=t_data["artists"][0]["id"], name=t_data["artists"][0]["name"]
+                spotify_id=t_data["artists"][0]["id"], name=t_data["artists"][0]["name"],
+                popularity=75, followers_count=1500000, genres=["latin pop", "reggaeton", "pop urbano"]
             ).on_conflict_do_nothing()
             res_art = self.db.execute(stmt_art)
             if res_art.rowcount > 0: new_artists += 1
