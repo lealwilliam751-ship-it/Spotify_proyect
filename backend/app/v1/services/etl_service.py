@@ -61,7 +61,8 @@ class ETLService:
         for item in data.get("items", []):
             stmt = insert(Artist).values(
                 spotify_id=item["id"], name=item["name"], 
-                genres=item.get("genres", []), popularity=item.get("popularity", 0)
+                genres=item.get("genres", []), popularity=item.get("popularity", 0),
+                followers_count=item.get("followers", {}).get("total", 0)
             ).on_conflict_do_nothing()
             self.db.execute(stmt)
         self.db.commit()
