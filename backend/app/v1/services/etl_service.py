@@ -62,10 +62,7 @@ class ETLService:
             stmt = insert(Artist).values(
                 spotify_id=item["id"], name=item["name"], 
                 genres=item.get("genres", []), popularity=item.get("popularity", 0)
-            ).on_conflict_do_update(
-                index_elements=["spotify_id"], 
-                set_={"genres": item.get("genres", []), "popularity": item.get("popularity", 0)}
-            )
+            ).on_conflict_do_nothing()
             self.db.execute(stmt)
         self.db.commit()
 
@@ -77,7 +74,7 @@ class ETLService:
             stmt = insert(Track).values(
                 spotify_id=item["id"], name=item["name"], artist_id=artist.artist_id,
                 album_name=item["album"]["name"], popularity=item.get("popularity", 0)
-            ).on_conflict_do_update(index_elements=["spotify_id"], set_={"popularity": item.get("popularity", 0)})
+            ).on_conflict_do_nothing()
             self.db.execute(stmt)
         self.db.commit()
 
